@@ -1,13 +1,9 @@
 import type { Express } from "express";
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
 import { handleMessage } from './services/dify';
 import type { IncomingMessage } from 'http';
 import type { Duplex } from 'stream';
-
-interface ExtendedWebSocket extends WebSocket {
-  conversationId?: string;
-  isAlive: boolean;
-}
+import type { ExtendedWebSocket } from './services/dify';
 
 export function registerRoutes(app: Express) {
   const wss = new WebSocketServer({ noServer: true });
@@ -18,7 +14,7 @@ export function registerRoutes(app: Express) {
   };
 
   wss.on('connection', (ws: ExtendedWebSocket) => {
-    ws.isAlive = true;
+    (ws as any).isAlive = true;
     ws.on('pong', () => heartbeat(ws));
 
     ws.on('message', async (data: Buffer) => {
@@ -52,17 +48,18 @@ export function registerRoutes(app: Express) {
     });
 
     ws.on('close', () => {
-      ws.isAlive = false;
+      (ws as any).isAlive = false;
     });
   });
 
   // Implement connection cleanup interval
   const interval = setInterval(() => {
-    wss.clients.forEach((ws: ExtendedWebSocket) => {
-      if (!ws.isAlive) {
+    wss.clients.forEach((ws) => {
+      const extWs = ws as ExtendedWebSocket;
+      if (!(extWs as any).isAlive) {
         return ws.terminate();
       }
-      ws.isAlive = false;
+      (extWs as any).isAlive = false;
       ws.ping();
     });
   }, 30000);
