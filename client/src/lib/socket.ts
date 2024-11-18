@@ -7,10 +7,26 @@ class SocketClient {
   private isConnecting = false;
   private isReady = false;
   private connectionTimeout: number = 5000; // 5 second timeout
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectDelay = 1000;
 
   constructor() {
     console.log('[WebSocket] Initializing socket client');
     this.connect();
+  }
+
+  private handleReconnect() {
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      console.log(`[WebSocket] Attempting to reconnect (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+      setTimeout(() => {
+        this.reconnectAttempts++;
+        this.reconnectDelay *= 1.5; // Exponential backoff
+        this.connect();
+      }, this.reconnectDelay);
+    } else {
+      console.error('[WebSocket] Max reconnection attempts reached');
+    }
   }
 
   private async connect() {
@@ -39,6 +55,7 @@ class SocketClient {
         if (!this.isReady && this.socket) {
           console.log('[WebSocket] Connection timeout, retrying...');
           this.socket.close();
+          this.handleReconnect();
         }
       }, this.connectionTimeout);
       
@@ -47,6 +64,8 @@ class SocketClient {
         clearTimeout(timeoutId);
         this.isConnecting = false;
         this.isReady = true;
+        this.reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+        this.reconnectDelay = 1000;
         this.processMessageQueue();
       };
 
