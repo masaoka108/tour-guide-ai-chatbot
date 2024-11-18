@@ -4,40 +4,74 @@ import { handleMessage } from './services/dify';
 import type { IncomingMessage } from 'http';
 import type { Duplex } from 'stream';
 
+interface ExtendedWebSocket extends WebSocket {
+  conversationId?: string;
+  isAlive: boolean;
+}
+
 export function registerRoutes(app: Express) {
   const wss = new WebSocketServer({ noServer: true });
 
-  wss.on('connection', (ws: WebSocket) => {
+  // Implement heartbeat mechanism to detect stale connections
+  const heartbeat = (ws: ExtendedWebSocket) => {
+    ws.isAlive = true;
+  };
+
+  wss.on('connection', (ws: ExtendedWebSocket) => {
+    ws.isAlive = true;
+    ws.on('pong', () => heartbeat(ws));
+
     ws.on('message', async (data: WebSocket.Data) => {
       try {
         const { content, timestamp } = JSON.parse(data.toString());
         
-        // Get response from Dify
-        const difyResponse = await handleMessage(content);
-        
-        // Send response
-        const response = {
+        // Send user message immediately
+        const userMessage = {
           id: crypto.randomUUID(),
-          content: difyResponse,
-          role: 'assistant',
-          timestamp: Date.now(),
-          responseTime: Date.now() - timestamp
+          content,
+          role: 'user',
+          timestamp: Date.now()
         };
+        ws.send(JSON.stringify(userMessage));
 
-        ws.send(JSON.stringify(response));
+        // Process message through Dify
+        await handleMessage(content, ws, ws.conversationId);
       } catch (error) {
         console.error('Error processing message:', error);
         ws.send(JSON.stringify({
           id: crypto.randomUUID(),
-          content: 'エラーが発生しました。もう一度お試しください。',
+          content: 'An error occurred while processing your message. Please try again.',
           role: 'assistant',
           timestamp: Date.now()
         }));
       }
     });
+
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+    });
+
+    ws.on('close', () => {
+      ws.isAlive = false;
+    });
   });
 
-  // @ts-ignore - Express types don't match perfectly with WebSocket upgrade
+  // Implement connection cleanup interval
+  const interval = setInterval(() => {
+    wss.clients.forEach((ws: ExtendedWebSocket) => {
+      if (!ws.isAlive) {
+        return ws.terminate();
+      }
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+
+  wss.on('close', () => {
+    clearInterval(interval);
+  });
+
+  // Handle upgrade request
   app.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit('connection', ws, request);
