@@ -3,6 +3,8 @@ import { Message } from './types';
 class SocketClient {
   private socket: WebSocket | null = null;
   private messageHandlers: ((message: Message) => void)[] = [];
+  private messageQueue: string[] = []; // Queue for messages while reconnecting
+  private isConnecting = false;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
@@ -12,37 +14,55 @@ class SocketClient {
     this.connect();
   }
 
-  private connect() {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${protocol}//${window.location.host}/ws`;
-    console.log('[WebSocket] Connecting to:', url);
-    
-    this.socket = new WebSocket(url);
-    
-    this.socket.onopen = () => {
-      console.log('[WebSocket] Connection established');
-      this.reconnectAttempts = 0;
-      this.reconnectDelay = 1000;
-    };
+  private async connect() {
+    if (this.isConnecting) return;
+    this.isConnecting = true;
 
-    this.socket.onclose = () => {
-      console.log('[WebSocket] Connection closed');
+    try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const url = `${protocol}//${window.location.host}/ws`;
+      console.log('[WebSocket] Connecting to:', url);
+      
+      this.socket = new WebSocket(url);
+      
+      this.socket.onopen = () => {
+        console.log('[WebSocket] Connection established');
+        this.isConnecting = false;
+        this.reconnectAttempts = 0;
+        this.reconnectDelay = 1000;
+        
+        // Send any queued messages
+        while (this.messageQueue.length > 0) {
+          const message = this.messageQueue.shift();
+          if (message) this.sendMessage(message);
+        }
+      };
+
+      this.socket.onclose = () => {
+        console.log('[WebSocket] Connection closed');
+        this.isConnecting = false;
+        this.handleReconnect();
+      };
+
+      this.socket.onerror = (error) => {
+        console.error('[WebSocket] Connection error:', error);
+        this.isConnecting = false;
+      };
+
+      this.socket.onmessage = (event) => {
+        console.log('[WebSocket] Received message:', event.data);
+        try {
+          const message = JSON.parse(event.data);
+          this.messageHandlers.forEach(handler => handler(message));
+        } catch (error) {
+          console.error('[WebSocket] Error parsing message:', error);
+        }
+      };
+    } catch (error) {
+      console.error('[WebSocket] Error during connection:', error);
+      this.isConnecting = false;
       this.handleReconnect();
-    };
-
-    this.socket.onerror = (error) => {
-      console.error('[WebSocket] Connection error:', error);
-    };
-
-    this.socket.onmessage = (event) => {
-      console.log('[WebSocket] Received message:', event.data);
-      try {
-        const message = JSON.parse(event.data);
-        this.messageHandlers.forEach(handler => handler(message));
-      } catch (error) {
-        console.error('[WebSocket] Error parsing message:', error);
-      }
-    };
+    }
   }
 
   private handleReconnect() {
@@ -67,7 +87,11 @@ class SocketClient {
       console.log('[WebSocket] Sending message:', message);
       this.socket.send(message);
     } else {
-      console.error('[WebSocket] Cannot send message - connection not open');
+      console.log('[WebSocket] Connection not open, queuing message');
+      this.messageQueue.push(content);
+      if (!this.isConnecting) {
+        this.connect(); // Try to reconnect if not already connecting
+      }
     }
   }
 
