@@ -21,7 +21,7 @@ export function registerRoutes(app: Express) {
     ws.isAlive = true;
     ws.on('pong', () => heartbeat(ws));
 
-    ws.on('message', async (data: WebSocket.Data) => {
+    ws.on('message', async (data: Buffer) => {
       try {
         const { content, timestamp } = JSON.parse(data.toString());
         
@@ -34,7 +34,7 @@ export function registerRoutes(app: Express) {
         };
         ws.send(JSON.stringify(userMessage));
 
-        // Process message through Dify
+        // Process message through Dify with conversation context
         await handleMessage(content, ws, ws.conversationId);
       } catch (error) {
         console.error('Error processing message:', error);
@@ -74,7 +74,7 @@ export function registerRoutes(app: Express) {
   // Handle upgrade request
   app.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
     wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit('connection', ws, request);
+      wss.emit('connection', ws as ExtendedWebSocket, request);
     });
   });
 }

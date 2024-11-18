@@ -19,6 +19,39 @@ export interface DifyError {
   message: string;
 }
 
+interface DifyEventBase {
+  event: string;
+  task_id: string;
+  message_id: string;
+  conversation_id: string;
+  created_at: number;
+}
+
+interface DifyMessageEvent extends DifyEventBase {
+  event: 'message';
+  answer: string;
+}
+
+interface DifyMessageEndEvent extends DifyEventBase {
+  event: 'message_end';
+  metadata: {
+    usage: {
+      latency: number;
+      [key: string]: any;
+    };
+    retriever_resources?: any[];
+  };
+}
+
+interface DifyErrorEvent extends DifyEventBase {
+  event: 'error';
+  status: number;
+  code: string;
+  message: string;
+}
+
+type DifyEvent = DifyMessageEvent | DifyMessageEndEvent | DifyErrorEvent;
+
 export async function handleMessage(message: string, ws: WebSocket, conversationId?: string): Promise<void> {
   try {
     const response = await fetch(`${DIFY_API_URL}/chat-messages`, {
@@ -34,7 +67,8 @@ export async function handleMessage(message: string, ws: WebSocket, conversation
         user: "tourist",
         inputs: {
           system_prompt: TOURISM_SYSTEM_PROMPT
-        }
+        },
+        auto_generate_name: true
       }),
     });
 
@@ -55,6 +89,7 @@ export async function handleMessage(message: string, ws: WebSocket, conversation
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let currentMessageParts: string[] = [];
 
     try {
       while (true) {
@@ -68,11 +103,12 @@ export async function handleMessage(message: string, ws: WebSocket, conversation
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
-              const data = JSON.parse(line.slice(5));
+              const data = JSON.parse(line.slice(5)) as DifyEvent;
               
-              // Handle different event types
               switch (data.event) {
                 case 'message':
+                  // Accumulate message parts for a smoother streaming experience
+                  currentMessageParts.push(data.answer);
                   ws.send(JSON.stringify({
                     id: data.message_id,
                     content: data.answer,
@@ -80,19 +116,24 @@ export async function handleMessage(message: string, ws: WebSocket, conversation
                     timestamp: data.created_at * 1000,
                     conversation_id: data.conversation_id
                   }));
+                  // Store conversation_id for context persistence
+                  if (data.conversation_id) {
+                    ws.conversationId = data.conversation_id;
+                  }
                   break;
 
                 case 'message_end':
                   if (data.metadata?.usage) {
-                    // Send final message with response time
+                    // Send complete message with metadata
                     ws.send(JSON.stringify({
-                      id: data.id,
-                      content: '',
-                      role: 'system',
+                      id: data.message_id,
+                      content: currentMessageParts.join(''),
+                      role: 'assistant',
                       timestamp: Date.now(),
                       conversation_id: data.conversation_id,
                       responseTime: Math.round(data.metadata.usage.latency * 1000)
                     }));
+                    currentMessageParts = []; // Reset for next message
                   }
                   break;
 
@@ -102,6 +143,10 @@ export async function handleMessage(message: string, ws: WebSocket, conversation
                     code: data.code,
                     message: data.message
                   };
+
+                case 'ping':
+                  // Handle ping events to keep the connection alive
+                  break;
               }
             } catch (parseError) {
               console.error('Error parsing SSE data:', parseError);
