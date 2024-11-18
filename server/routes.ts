@@ -4,21 +4,28 @@ import { handleMessage } from './services/dify';
 import type { IncomingMessage } from 'http';
 import type { Duplex } from 'stream';
 import type { ExtendedWebSocket } from './services/dify';
+import crypto from 'crypto';
 
 export function registerRoutes(app: Express) {
   const wss = new WebSocketServer({ noServer: true });
 
   // Implement heartbeat mechanism to detect stale connections
   const heartbeat = (ws: ExtendedWebSocket) => {
+    console.log('[WebSocket] Heartbeat received');
     ws.isAlive = true;
   };
 
   wss.on('connection', (ws: ExtendedWebSocket) => {
-    (ws as any).isAlive = true;
-    ws.on('pong', () => heartbeat(ws));
+    console.log('[WebSocket] New connection established');
+    ws.isAlive = true;
+    ws.on('pong', () => {
+      console.log('[WebSocket] Received pong');
+      heartbeat(ws);
+    });
 
     ws.on('message', async (data: Buffer) => {
       try {
+        console.log('[WebSocket] Received message:', data.toString());
         const { content, timestamp } = JSON.parse(data.toString());
         
         // Send user message immediately
@@ -28,12 +35,13 @@ export function registerRoutes(app: Express) {
           role: 'user',
           timestamp: Date.now()
         };
+        console.log('[WebSocket] Sending user message:', userMessage);
         ws.send(JSON.stringify(userMessage));
 
-        // Process message through Dify with conversation context
+        console.log('[WebSocket] Processing through Dify with conversationId:', ws.conversationId);
         await handleMessage(content, ws, ws.conversationId);
       } catch (error) {
-        console.error('Error processing message:', error);
+        console.error('[WebSocket] Error processing message:', error);
         ws.send(JSON.stringify({
           id: crypto.randomUUID(),
           content: 'An error occurred while processing your message. Please try again.',
@@ -44,11 +52,12 @@ export function registerRoutes(app: Express) {
     });
 
     ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
+      console.error('[WebSocket] Connection error:', error);
     });
 
     ws.on('close', () => {
-      (ws as any).isAlive = false;
+      console.log('[WebSocket] Connection closed');
+      ws.isAlive = false;
     });
   });
 
@@ -56,20 +65,25 @@ export function registerRoutes(app: Express) {
   const interval = setInterval(() => {
     wss.clients.forEach((ws) => {
       const extWs = ws as ExtendedWebSocket;
-      if (!(extWs as any).isAlive) {
+      if (!extWs.isAlive) {
+        console.log('[WebSocket] Terminating inactive connection');
         return ws.terminate();
       }
-      (extWs as any).isAlive = false;
-      ws.ping();
+      extWs.isAlive = false;
+      ws.ping(() => {
+        console.log('[WebSocket] Ping sent');
+      });
     });
   }, 30000);
 
   wss.on('close', () => {
+    console.log('[WebSocket] Server closing');
     clearInterval(interval);
   });
 
   // Handle upgrade request
   app.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+    console.log('[WebSocket] Upgrade request received');
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit('connection', ws as ExtendedWebSocket, request);
     });

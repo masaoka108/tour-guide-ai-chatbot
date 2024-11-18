@@ -17,6 +17,7 @@ Always maintain a friendly, professional tone and provide specific, actionable a
 // Define interface for WebSocket with conversation tracking
 export interface ExtendedWebSocket extends WebSocket {
   conversationId?: string;
+  isAlive?: boolean;
 }
 
 export interface DifyError {
@@ -26,6 +27,7 @@ export interface DifyError {
 }
 
 export async function handleMessage(message: string, ws: ExtendedWebSocket, conversationId?: string): Promise<void> {
+  console.log('[Dify] Sending message:', { message, conversationId });
   try {
     const response = await fetch(`${DIFY_API_URL}/chat-messages`, {
       method: 'POST',
@@ -38,12 +40,17 @@ export async function handleMessage(message: string, ws: ExtendedWebSocket, conv
         response_mode: 'streaming',
         conversation_id: conversationId || '',
         user: 'tourist',
-        inputs: {},
+        inputs: {
+          system_prompt: TOURISM_SYSTEM_PROMPT
+        },
       }),
     });
 
+    console.log('[Dify] Response status:', response.status);
+
     if (!response.ok) {
       const errorData = await response.json() as { code?: string; message?: string };
+      console.error('[Dify] API error:', errorData);
       throw {
         status: response.status,
         code: errorData.code || 'api_error',
@@ -52,6 +59,7 @@ export async function handleMessage(message: string, ws: ExtendedWebSocket, conv
     }
 
     if (!response.body) {
+      console.error('[Dify] No response body received');
       throw new Error('No response body received');
     }
 
@@ -59,9 +67,14 @@ export async function handleMessage(message: string, ws: ExtendedWebSocket, conv
     const decoder = new TextDecoder();
     let buffer = '';
 
+    console.log('[Dify] Starting to read stream');
+
     while (reader) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        console.log('[Dify] Stream complete');
+        break;
+      }
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
@@ -71,6 +84,7 @@ export async function handleMessage(message: string, ws: ExtendedWebSocket, conv
         if (line.trim() && line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6));
+            console.log('[Dify] Received event:', data.event, data);
             
             switch (data.event) {
               case 'message':
@@ -86,10 +100,12 @@ export async function handleMessage(message: string, ws: ExtendedWebSocket, conv
               case 'message_end':
                 if (data.conversation_id) {
                   ws.conversationId = data.conversation_id;
+                  console.log('[Dify] Updated conversation ID:', data.conversation_id);
                 }
                 break;
 
               case 'error':
+                console.error('[Dify] Stream error:', data);
                 throw {
                   status: data.status,
                   code: data.code,
@@ -97,13 +113,13 @@ export async function handleMessage(message: string, ws: ExtendedWebSocket, conv
                 };
             }
           } catch (parseError) {
-            console.error('Error parsing SSE data:', parseError);
+            console.error('[Dify] Error parsing SSE data:', parseError, 'Line:', line);
           }
         }
       }
     }
   } catch (error) {
-    console.error('Dify API error:', error);
+    console.error('[Dify] Error in handleMessage:', error);
     ws.send(JSON.stringify({
       id: crypto.randomUUID(),
       content: getErrorMessage(error),
