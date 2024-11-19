@@ -31,70 +31,63 @@ class SocketClient {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
 
-      // Get dynamic port from server
-      try {
-        const response = await fetch('/api/port');
-        if (!response.ok) {
-          throw new Error(`Failed to get server port: ${response.statusText}`);
+      // Get the current hostname without port
+      const hostname = window.location.hostname;
+      
+      // Determine the WebSocket protocol
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      
+      // Build the WebSocket URL using the same hostname as the current page
+      const url = `${protocol}//${hostname}/ws`;
+      console.log('[WebSocket] Connecting to:', url);
+      
+      this.socket = new WebSocket(url);
+
+      // Set connection timeout
+      const timeoutId = setTimeout(() => {
+        if (this.socket?.readyState === WebSocket.CONNECTING) {
+          console.log('[WebSocket] Connection timeout, closing socket...');
+          this.socket.close();
+          this.handleReconnect();
         }
-        const { port } = await response.json();
-        
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.hostname + (port ? `:${port}` : '');
-        const url = `${protocol}//${host}/ws`;
-        
-        console.log('[WebSocket] Connecting to:', url);
-        
-        this.socket = new WebSocket(url);
+      }, 5000);
 
-        // Set up connection timeout
-        const connectionTimeout = setTimeout(() => {
-          if (this.socket?.readyState === WebSocket.CONNECTING) {
-            console.log('[WebSocket] Connection timeout, retrying...');
-            this.socket.close();
-          }
-        }, 5000);
-
-        this.socket.onopen = () => {
-          console.log('[WebSocket] Connection established');
-          clearTimeout(connectionTimeout);
-          this.isConnecting = false;
-          this.isReady = true;
-          this.reconnectAttempts = 0;
-          this.reconnectDelay = 1000;
-          this.processMessageQueue();
-        };
-
-        this.socket.onclose = () => {
-          console.log('[WebSocket] Connection closed');
-          clearTimeout(connectionTimeout);
-          this.isConnecting = false;
-          this.isReady = false;
-          if (!this.isReconnecting) {
-            this.handleReconnect();
-          }
-        };
-
-        this.socket.onerror = (error) => {
-          console.error('[WebSocket] Connection error:', error);
-          clearTimeout(connectionTimeout);
-          this.isConnecting = false;
-          this.isReady = false;
-        };
-
-        this.socket.onmessage = (event) => {
-          try {
-            const message = JSON.parse(event.data);
-            this.messageHandlers.forEach(handler => handler(message));
-          } catch (error) {
-            console.error('[WebSocket] Error parsing message:', error);
-          }
-        };
-      } catch (error) {
-        console.error('[WebSocket] Error fetching port:', error);
+      this.socket.onopen = () => {
+        console.log('[WebSocket] Connection established');
+        clearTimeout(timeoutId);
         this.isConnecting = false;
-        this.handleReconnect();
-      }
+        this.isReady = true;
+        this.reconnectAttempts = 0;
+        this.reconnectDelay = 1000;
+        this.processMessageQueue();
+      };
+
+      this.socket.onclose = (event) => {
+        console.log('[WebSocket] Connection closed', event.code, event.reason);
+        clearTimeout(timeoutId);
+        this.isConnecting = false;
+        this.isReady = false;
+        if (!this.isReconnecting) {
+          this.handleReconnect();
+        }
+      };
+
+      this.socket.onerror = (error) => {
+        console.error('[WebSocket] Connection error:', error);
+        clearTimeout(timeoutId);
+        this.isConnecting = false;
+        this.isReady = false;
+        // Don't close the socket here, let the timeout or onclose handle it
+      };
+
+      this.socket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          this.messageHandlers.forEach(handler => handler(message));
+        } catch (error) {
+          console.error('[WebSocket] Error parsing message:', error);
+        }
+      };
     } catch (error) {
       console.error('[WebSocket] Error during connection:', error);
       this.isConnecting = false;

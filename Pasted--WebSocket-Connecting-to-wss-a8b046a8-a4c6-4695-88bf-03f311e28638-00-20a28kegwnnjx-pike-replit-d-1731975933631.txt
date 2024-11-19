@@ -1,0 +1,27 @@
+[WebSocket] Connecting to: wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev:5000/ws
+multi-tabs.js:22 Injected CSS loaded successfully
+socket.ts:48 WebSocket connection to 'wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev:5000/ws' failed: 
+connect @ socket.ts:48
+socket.ts:79 [WebSocket] Connection error: Event {isTrusted: true, type: 'error', target: WebSocket, currentTarget: WebSocket, eventPhase: 2, …}isTrusted: truebubbles: falsecancelBubble: falsecancelable: falsecomposed: falsecurrentTarget: WebSocket {url: 'wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev:5000/ws', readyState: 3, bufferedAmount: 0, onopen: ƒ, onerror: ƒ, …}defaultPrevented: falseeventPhase: 0returnValue: truesrcElement: WebSocket {url: 'wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev:5000/ws', readyState: 3, bufferedAmount: 0, onopen: ƒ, onerror: ƒ, …}target: WebSocket {url: 'wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev:5000/ws', readyState: 3, bufferedAmount: 0, onopen: ƒ, onerror: ƒ, …}timeStamp: 3026.1000000089407type: "error"[[Prototype]]: Event
+overrideMethod @ hook.js:608
+socket.onerror @ socket.ts:79
+error
+connect @ socket.ts:78
+await in connect
+SocketClient @ socket.ts:16
+(anonymous) @ socket.ts:170
+socket.ts:69 [WebSocket] Connection closed
+socket.ts:110 [WebSocket] Attempting to reconnect (1/5)
+socket.ts:46 [WebSocket] Connecting to: wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev:5000/ws
+socket.ts:48 WebSocket connection to 'wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev:5000/ws' failed: 
+connect @ socket.ts:48
+socket.ts:79 [WebSocket] Connection error: Event {isTrusted: true, type: 'error', target: WebSocket, currentTarget: WebSocket, eventPhase: 2, …}
+overrideMethod @ hook.js:608
+socket.onerror @ socket.ts:79
+error
+connect @ socket.ts:78
+await in connect
+handleReconnect @ socket.ts:115
+await in handleReconnect
+socket.onclose @ socket.ts:74
+socket.ts:69 [WebSocket] Connection closed
