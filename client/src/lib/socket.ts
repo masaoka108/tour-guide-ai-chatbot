@@ -31,16 +31,13 @@ class SocketClient {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
 
-      // Get the current hostname without port
+      // Get the current location including port
       const hostname = window.location.hostname;
-      
-      // Determine the WebSocket protocol
+      const port = window.location.port || '5001'; // Default to 5001 if no port specified
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const url = `${protocol}//${hostname}${port ? `:${port}` : ''}/ws`;
       
-      // Build the WebSocket URL using the same hostname as the current page
-      const url = `${protocol}//${hostname}/ws`;
       console.log('[WebSocket] Connecting to:', url);
-      
       this.socket = new WebSocket(url);
 
       // Set connection timeout
@@ -62,8 +59,8 @@ class SocketClient {
         this.processMessageQueue();
       };
 
-      this.socket.onclose = (event) => {
-        console.log('[WebSocket] Connection closed', event.code, event.reason);
+      this.socket.onclose = () => {
+        console.log('[WebSocket] Connection closed');
         clearTimeout(timeoutId);
         this.isConnecting = false;
         this.isReady = false;
@@ -77,7 +74,6 @@ class SocketClient {
         clearTimeout(timeoutId);
         this.isConnecting = false;
         this.isReady = false;
-        // Don't close the socket here, let the timeout or onclose handle it
       };
 
       this.socket.onmessage = (event) => {
@@ -107,7 +103,7 @@ class SocketClient {
       this.isReconnecting = false;
       this.connect();
     } else {
-      console.error('[WebSocket] Max reconnection attempts reached');
+      console.log('[WebSocket] Max reconnection attempts reached');
       this.isReconnecting = false;
     }
   }
