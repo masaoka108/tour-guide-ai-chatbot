@@ -1,0 +1,207 @@
+[WebSocket] Initializing socket client
+socket.ts:49 [WebSocket] Connecting to: wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev/ws
+multi-tabs.js:36 
+        
+        
+       POST https://o4504156929982464.ingest.sentry.io/api/4504222632443904/envelope/?sentry_key=c43a1b6af24946be99c06b2dcda5162b&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.119.2 net::ERR_BLOCKED_BY_CLIENT
+o @ multi-tabs.js:36
+d @ multi-tabs.js:29
+o @ multi-tabs.js:22
+i @ multi-tabs.js:29
+_sendEnvelope @ multi-tabs.js:29
+sendSession @ multi-tabs.js:28
+captureSession @ multi-tabs.js:28
+pb @ multi-tabs.js:24
+gb @ multi-tabs.js:24
+Xz @ multi-tabs.js:36
+Kz @ multi-tabs.js:36
+(anonymous) @ multi-tabs.js:3522
+(anonymous) @ multi-tabs.js:3532
+multi-tabs.js:22 Injected CSS loaded successfully
+socket.ts:56 [WebSocket] Connection timeout, retrying...
+socket.ts:57 WebSocket connection to 'wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+(anonymous) @ socket.ts:57
+setTimeout
+connect @ socket.ts:54
+SocketClient @ socket.ts:16
+(anonymous) @ socket.ts:161
+socket.ts:21 [WebSocket] Attempting to reconnect (1/5)
+socket.ts:81 [WebSocket] Connection error: Event {isTrusted: true, type: 'error', target: WebSocket, currentTarget: WebSocket, eventPhase: 2, …}isTrusted: truebubbles: falsecancelBubble: falsecancelable: falsecomposed: falsecurrentTarget: WebSocket {url: 'wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev/ws', readyState: 3, bufferedAmount: 0, onopen: ƒ, onerror: ƒ, …}defaultPrevented: falseeventPhase: 0returnValue: truesrcElement: WebSocket {url: 'wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev/ws', readyState: 3, bufferedAmount: 0, onopen: ƒ, onerror: ƒ, …}target: WebSocket {url: 'wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev/ws', readyState: 3, bufferedAmount: 0, onopen: ƒ, onerror: ƒ, …}timeStamp: 8244.89999999106type: "error"[[Prototype]]: Event
+overrideMethod @ hook.js:608
+socket.onerror @ socket.ts:81
+error
+connect @ socket.ts:80
+SocketClient @ socket.ts:16
+(anonymous) @ socket.ts:161
+socket.ts:73 [WebSocket] Connection closed
+socket.ts:21 [WebSocket] Attempting to reconnect (1/5)
+socket.ts:34 [WebSocket] Connection already in progress
+socket.ts:49 [WebSocket] Connecting to: wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev/ws
+socket.ts:56 [WebSocket] Connection timeout, retrying...
+socket.ts:57 WebSocket connection to 'wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+(anonymous) @ socket.ts:57
+setTimeout
+connect @ socket.ts:54
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+SocketClient @ socket.ts:16
+(anonymous) @ socket.ts:161
+socket.ts:21 [WebSocket] Attempting to reconnect (3/5)
+socket.ts:81 [WebSocket] Connection error: Event {isTrusted: true, type: 'error', target: WebSocket, currentTarget: WebSocket, eventPhase: 2, …}
+overrideMethod @ hook.js:608
+socket.onerror @ socket.ts:81
+error
+connect @ socket.ts:80
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+SocketClient @ socket.ts:16
+(anonymous) @ socket.ts:161
+socket.ts:73 [WebSocket] Connection closed
+socket.ts:21 [WebSocket] Attempting to reconnect (3/5)
+socket.ts:34 [WebSocket] Connection already in progress
+socket.ts:49 [WebSocket] Connecting to: wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev/ws
+socket.ts:56 [WebSocket] Connection timeout, retrying...
+socket.ts:57 WebSocket connection to 'wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+(anonymous) @ socket.ts:57
+setTimeout
+connect @ socket.ts:54
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+SocketClient @ socket.ts:16
+(anonymous) @ socket.ts:161
+socket.ts:21 [WebSocket] Attempting to reconnect (5/5)
+socket.ts:81 [WebSocket] Connection error: Event {isTrusted: true, type: 'error', target: WebSocket, currentTarget: WebSocket, eventPhase: 2, …}
+overrideMethod @ hook.js:608
+socket.onerror @ socket.ts:81
+error
+connect @ socket.ts:80
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+SocketClient @ socket.ts:16
+(anonymous) @ socket.ts:161
+socket.ts:73 [WebSocket] Connection closed
+socket.ts:21 [WebSocket] Attempting to reconnect (5/5)
+socket.ts:34 [WebSocket] Connection already in progress
+socket.ts:49 [WebSocket] Connecting to: wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev/ws
+socket.ts:145 [WebSocket] Connection not ready, queuing message
+socket.ts:56 [WebSocket] Connection timeout, retrying...
+socket.ts:57 WebSocket connection to 'wss://a8b046a8-a4c6-4695-88bf-03f311e28638-00-20a28kegwnnjx.pike.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+(anonymous) @ socket.ts:57
+setTimeout
+connect @ socket.ts:54
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+SocketClient @ socket.ts:16
+(anonymous) @ socket.ts:161
+socket.ts:28 [WebSocket] Max reconnection attempts reached
+overrideMethod @ hook.js:608
+handleReconnect @ socket.ts:28
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+SocketClient @ socket.ts:16
+(anonymous) @ socket.ts:161
+socket.ts:81 [WebSocket] Connection error: Event {isTrusted: true, type: 'error', target: WebSocket, currentTarget: WebSocket, eventPhase: 2, …}
+overrideMethod @ hook.js:608
+socket.onerror @ socket.ts:81
+error
+connect @ socket.ts:80
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+await in connect
+(anonymous) @ socket.ts:25
+setTimeout
+handleReconnect @ socket.ts:22
+(anonymous) @ socket.ts:58
+setTimeout
+connect @ socket.ts:54
+SocketClient @ socket.ts:16
+(anonymous) @ socket.ts:161
+socket.ts:73 [WebSocket] Connection closed
+socket.ts:28 [WebSocket] Max reconnection attempts reached

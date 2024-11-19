@@ -7,38 +7,48 @@ import type { ExtendedWebSocket } from './services/dify';
 import crypto from 'crypto';
 
 export function registerRoutes(app: Express) {
-  const wss = new WebSocketServer({ noServer: true });
+  // Add endpoint to get server port
+  app.get('/api/port', (_req, res) => {
+    const port = app.get('port') || process.env.PORT || 5000;
+    res.json({ port });
+  });
+
+  const wss = new WebSocketServer({ 
+    noServer: true,
+    clientTracking: true,
+    perMessageDeflate: false,
+    maxPayload: 50 * 1024 * 1024 // 50MB max payload
+  });
 
   // Implement heartbeat mechanism to detect stale connections
   const heartbeat = (ws: ExtendedWebSocket) => {
-    console.log('[WebSocket] Heartbeat received');
     ws.isAlive = true;
   };
 
   wss.on('connection', (ws: ExtendedWebSocket) => {
     console.log('[WebSocket] New connection established');
     ws.isAlive = true;
-    ws.on('pong', () => {
-      console.log('[WebSocket] Received pong');
-      heartbeat(ws);
-    });
+
+    // Send initial connection success message
+    ws.send(JSON.stringify({
+      id: crypto.randomUUID(),
+      content: 'Connected successfully to AI Tourism Guide',
+      role: 'system',
+      timestamp: Date.now()
+    }));
+
+    ws.on('pong', () => heartbeat(ws));
 
     ws.on('message', async (data: Buffer) => {
       try {
-        console.log('[WebSocket] Received message:', data.toString());
-        const { content, timestamp } = JSON.parse(data.toString());
+        const message = JSON.parse(data.toString());
+        const { content } = message;
         
-        // Send user message immediately
-        const userMessage = {
-          id: crypto.randomUUID(),
-          content,
-          role: 'user',
-          timestamp: Date.now()
-        };
-        console.log('[WebSocket] Sending user message:', userMessage);
-        ws.send(JSON.stringify(userMessage));
+        if (!content || typeof content !== 'string') {
+          throw new Error('Invalid message format');
+        }
 
-        console.log('[WebSocket] Processing through Dify with conversationId:', ws.conversationId);
+        // Process through Dify
         await handleMessage(content, ws, ws.conversationId);
       } catch (error) {
         console.error('[WebSocket] Error processing message:', error);
@@ -70,9 +80,7 @@ export function registerRoutes(app: Express) {
         return ws.terminate();
       }
       extWs.isAlive = false;
-      ws.ping(() => {
-        console.log('[WebSocket] Ping sent');
-      });
+      ws.ping();
     });
   }, 30000);
 
@@ -81,11 +89,27 @@ export function registerRoutes(app: Express) {
     clearInterval(interval);
   });
 
-  // Handle upgrade request
+  // Handle upgrade requests
   app.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+    if (socket.destroyed) {
+      console.log('[WebSocket] Socket already destroyed, ignoring upgrade');
+      return;
+    }
+
     console.log('[WebSocket] Upgrade request received');
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit('connection', ws as ExtendedWebSocket, request);
+    
+    socket.on('error', (err) => {
+      console.error('[WebSocket] Upgrade socket error:', err);
     });
+
+    try {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        console.log('[WebSocket] Connection upgraded successfully');
+        wss.emit('connection', ws as ExtendedWebSocket, request);
+      });
+    } catch (error) {
+      console.error('[WebSocket] Upgrade error:', error);
+      socket.destroy();
+    }
   });
 }

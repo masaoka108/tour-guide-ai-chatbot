@@ -6,27 +6,14 @@ class SocketClient {
   private messageQueue: string[] = [];
   private isConnecting = false;
   private isReady = false;
-  private connectionTimeout: number = 5000; // 5 second timeout
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
+  private isReconnecting = false;
 
   constructor() {
     console.log('[WebSocket] Initializing socket client');
     this.connect();
-  }
-
-  private handleReconnect() {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      console.log(`[WebSocket] Attempting to reconnect (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
-      setTimeout(() => {
-        this.reconnectAttempts++;
-        this.reconnectDelay *= 1.5; // Exponential backoff
-        this.connect();
-      }, this.reconnectDelay);
-    } else {
-      console.error('[WebSocket] Max reconnection attempts reached');
-    }
   }
 
   private async connect() {
@@ -41,76 +28,106 @@ class SocketClient {
     try {
       if (this.socket) {
         this.socket.close();
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const url = `${protocol}//${window.location.host}/ws`;
-      console.log('[WebSocket] Connecting to:', url);
-      
-      this.socket = new WebSocket(url);
-
-      // Add connection timeout
-      const timeoutId = setTimeout(() => {
-        if (!this.isReady && this.socket) {
-          console.log('[WebSocket] Connection timeout, retrying...');
-          this.socket.close();
-          this.handleReconnect();
+      // Get dynamic port from server
+      try {
+        const response = await fetch('/api/port');
+        if (!response.ok) {
+          throw new Error(`Failed to get server port: ${response.statusText}`);
         }
-      }, this.connectionTimeout);
-      
-      this.socket.onopen = () => {
-        console.log('[WebSocket] Connection established');
-        clearTimeout(timeoutId);
-        this.isConnecting = false;
-        this.isReady = true;
-        this.reconnectAttempts = 0; // Reset reconnect attempts on successful connection
-        this.reconnectDelay = 1000;
-        this.processMessageQueue();
-      };
+        const { port } = await response.json();
+        
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.hostname + (port ? `:${port}` : '');
+        const url = `${protocol}//${host}/ws`;
+        
+        console.log('[WebSocket] Connecting to:', url);
+        
+        this.socket = new WebSocket(url);
 
-      this.socket.onclose = () => {
-        console.log('[WebSocket] Connection closed');
-        clearTimeout(timeoutId);
+        // Set up connection timeout
+        const connectionTimeout = setTimeout(() => {
+          if (this.socket?.readyState === WebSocket.CONNECTING) {
+            console.log('[WebSocket] Connection timeout, retrying...');
+            this.socket.close();
+          }
+        }, 5000);
+
+        this.socket.onopen = () => {
+          console.log('[WebSocket] Connection established');
+          clearTimeout(connectionTimeout);
+          this.isConnecting = false;
+          this.isReady = true;
+          this.reconnectAttempts = 0;
+          this.reconnectDelay = 1000;
+          this.processMessageQueue();
+        };
+
+        this.socket.onclose = () => {
+          console.log('[WebSocket] Connection closed');
+          clearTimeout(connectionTimeout);
+          this.isConnecting = false;
+          this.isReady = false;
+          if (!this.isReconnecting) {
+            this.handleReconnect();
+          }
+        };
+
+        this.socket.onerror = (error) => {
+          console.error('[WebSocket] Connection error:', error);
+          clearTimeout(connectionTimeout);
+          this.isConnecting = false;
+          this.isReady = false;
+        };
+
+        this.socket.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            this.messageHandlers.forEach(handler => handler(message));
+          } catch (error) {
+            console.error('[WebSocket] Error parsing message:', error);
+          }
+        };
+      } catch (error) {
+        console.error('[WebSocket] Error fetching port:', error);
         this.isConnecting = false;
-        this.isReady = false;
         this.handleReconnect();
-      };
-
-      this.socket.onerror = (error) => {
-        console.error('[WebSocket] Connection error:', error);
-        clearTimeout(timeoutId);
-        this.isConnecting = false;
-        this.isReady = false;
-      };
-
-      this.socket.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          this.messageHandlers.forEach(handler => handler(message));
-        } catch (error) {
-          console.error('[WebSocket] Error parsing message:', error);
-        }
-      };
+      }
     } catch (error) {
       console.error('[WebSocket] Error during connection:', error);
       this.isConnecting = false;
-      this.isReady = false;
       this.handleReconnect();
     }
   }
 
+  private async handleReconnect() {
+    if (this.isReconnecting) return;
+    
+    this.isReconnecting = true;
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      console.log(`[WebSocket] Attempting to reconnect (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+      this.reconnectAttempts++;
+      this.reconnectDelay = Math.min(this.reconnectDelay * 1.5, 10000);
+      await new Promise(resolve => setTimeout(resolve, this.reconnectDelay));
+      this.isReconnecting = false;
+      this.connect();
+    } else {
+      console.error('[WebSocket] Max reconnection attempts reached');
+      this.isReconnecting = false;
+    }
+  }
+
   private async processMessageQueue() {
-    console.log('[WebSocket] Processing message queue:', this.messageQueue.length);
     while (this.messageQueue.length > 0) {
       if (!this.isReady || !this.socket || this.socket.readyState !== WebSocket.OPEN) {
-        console.log('[WebSocket] Connection lost while processing queue');
         break;
       }
       const message = this.messageQueue.shift();
       if (message) {
         try {
-          await this._sendMessage(message);
+          await this.sendMessage(message);
           await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
           console.error('[WebSocket] Error sending queued message:', error);
@@ -121,31 +138,23 @@ class SocketClient {
     }
   }
 
-  private async _sendMessage(content: string) {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      throw new Error('WebSocket not connected');
+  public async sendMessage(content: string) {
+    if (!content.trim()) {
+      return;
     }
+
     const message = JSON.stringify({
       content,
       timestamp: Date.now()
     });
-    this.socket.send(message);
-  }
-
-  public async sendMessage(content: string) {
-    if (!content.trim()) {
-      console.log('[WebSocket] Empty message, not sending');
-      return;
-    }
 
     if (this.isReady && this.socket?.readyState === WebSocket.OPEN) {
-      console.log('[WebSocket] Sending message immediately');
-      await this._sendMessage(content);
+      this.socket.send(message);
     } else {
       console.log('[WebSocket] Connection not ready, queuing message');
       this.messageQueue.push(content);
       if (!this.isConnecting) {
-        await this.connect();
+        this.connect();
       }
     }
   }
